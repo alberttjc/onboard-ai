@@ -29,7 +29,6 @@ import {
 } from "@google/genai";
 
 import { EventEmitter } from "eventemitter3";
-import { difference } from "lodash";
 import { LiveClientOptions, StreamingLog } from "./types";
 import { base64ToArrayBuffer } from "./audio-utils";
 
@@ -214,9 +213,8 @@ export class GenAILiveClient extends EventEmitter<LiveClientEventTypes> {
         );
         const base64s = audioParts.map((p) => p.inlineData?.data);
 
-        // strip the audio parts out of the modelTurn
-        const otherParts = difference(parts, audioParts);
-        // console.log("otherParts", otherParts);
+        // FIXED: Replace lodash difference with native filter
+        const otherParts = parts.filter(part => !audioParts.includes(part));
 
         base64s.forEach((b64) => {
           if (b64) {

@@ -9,14 +9,16 @@ import React, { memo } from 'react';
 import { useLiveAPI } from '@/contexts/LiveAPIProvider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Bug } from "lucide-react";
+import { Bug, Settings } from "lucide-react";
 
 interface ConnectionStatusProps {
   onToggleLogs?: (show: boolean) => void;
   showLogs?: boolean;
+  onToggleLeftPanel?: () => void; // NEW: Left panel toggle
+  showLeftPanel?: boolean; // NEW: Left panel state
 }
 
-const ConnectionStatus = memo(({ onToggleLogs, showLogs = false }: ConnectionStatusProps) => {
+const ConnectionStatus = memo(({ onToggleLogs, showLogs = false, onToggleLeftPanel, showLeftPanel }: ConnectionStatusProps) => {
   const { state } = useLiveAPI();
 
   return (
@@ -36,17 +38,35 @@ const ConnectionStatus = memo(({ onToggleLogs, showLogs = false }: ConnectionSta
           )}
         </div>
       </div>
-      <Button 
-        variant="ghost" 
-        size="sm" 
-        className={`text-gray-400 hover:text-white ${
-          showLogs ? 'text-blue-400' : ''
-        } w-10 h-10 lg:w-auto lg:h-auto hidden lg:flex`}
-        onClick={() => onToggleLogs?.(!showLogs)}
-        title={showLogs ? "Hide logs panel" : "Show logs panel"}
-      >
-        <Bug className="w-5 h-5 lg:w-4 lg:h-4" />
-      </Button>
+      <div className="flex items-center space-x-2">
+        {/* NEW: Left Panel Toggle Button (Gear Icon) */}
+        {onToggleLeftPanel && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className={`text-gray-400 hover:text-white ${
+              showLeftPanel ? 'text-blue-400' : ''
+            } w-10 h-10 lg:w-auto lg:h-auto hidden lg:flex`}
+            onClick={onToggleLeftPanel}
+            title={showLeftPanel ? "Hide console panel" : "Show console panel"}
+          >
+            <Settings className="w-5 h-5 lg:w-4 lg:h-4" />
+          </Button>
+        )}
+        
+        {/* Debug/Logs Toggle Button */}
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className={`text-gray-400 hover:text-white ${
+            showLogs ? 'text-blue-400' : ''
+          } w-10 h-10 lg:w-auto lg:h-auto hidden lg:flex`}
+          onClick={() => onToggleLogs?.(!showLogs)}
+          title={showLogs ? "Hide logs panel" : "Show logs panel"}
+        >
+          <Bug className="w-5 h-5 lg:w-4 lg:h-4" />
+        </Button>
+      </div>
     </div>
   );
 });

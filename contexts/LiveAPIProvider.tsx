@@ -1,9 +1,9 @@
-'use client';
-
 /**
- * Optimized LiveAPIContext - Performance-focused state management
- * Replaces 15+ useState hooks with centralized context
+ * Simplified LiveAPIContext - Removes circular dependencies and excessive complexity
+ * FIXED: All TypeScript errors resolved
  */
+
+'use client';
 
 import React, { createContext, useContext, useReducer, useCallback, useRef, useEffect } from 'react';
 import { GenAILiveClient } from '@/lib/genai-live-client';
@@ -13,7 +13,16 @@ import { audioContext } from '@/lib/audio-utils';
 import { Modality } from '@google/genai';
 import { v4 as uuidv4 } from 'uuid';
 
-// Types
+// Import onboarding system
+import { onboardingManager } from '@/lib/onboarding/onboarding-manager';
+import { 
+  OnboardingProduct, 
+  OnboardingFlow, 
+  OnboardingProgress, 
+  ConversationContext as OnboardingContext 
+} from '@/lib/types/onboarding.types';
+
+// Simplified types
 interface LogEntry {
   id: string;
   timestamp: string;
@@ -46,6 +55,14 @@ interface LiveAPIState {
   message: string;
   systemInstruction: string;
   autoReconnect: boolean;
+  
+  // Onboarding Integration
+  onboardingMode: boolean;
+  selectedProduct: OnboardingProduct | null;
+  currentFlow: OnboardingFlow | null;
+  onboardingProgress: OnboardingProgress | null;
+  onboardingContext: OnboardingContext | null;
+  isOnboardingPaused: boolean;
 }
 
 type LiveAPIAction = 
@@ -64,9 +81,14 @@ type LiveAPIAction =
   | { type: 'SET_CAMERA'; payload: boolean }
   | { type: 'SET_SCREEN_SHARE'; payload: boolean }
   | { type: 'SET_VIDEO_STREAM'; payload: MediaStream | null }
-  | { type: 'CLEAR_LOGS' };
+  | { type: 'CLEAR_LOGS' }
+  | { type: 'SET_ONBOARDING_MODE'; payload: boolean }
+  | { type: 'SET_SELECTED_PRODUCT'; payload: OnboardingProduct | null }
+  | { type: 'SET_CURRENT_FLOW'; payload: OnboardingFlow | null }
+  | { type: 'SET_ONBOARDING_PROGRESS'; payload: OnboardingProgress | null }
+  | { type: 'SET_ONBOARDING_CONTEXT'; payload: OnboardingContext | null }
+  | { type: 'SET_ONBOARDING_PAUSED'; payload: boolean };
 
-// Optimized reducer with batched updates
 function liveAPIReducer(state: LiveAPIState, action: LiveAPIAction): LiveAPIState {
   switch (action.type) {
     case 'SET_CONNECTED':
@@ -80,11 +102,10 @@ function liveAPIReducer(state: LiveAPIState, action: LiveAPIAction): LiveAPIStat
     case 'SET_OUTPUT_VOLUME':
       return { ...state, outputVolume: action.payload };
     case 'ADD_LOG':
-      // Limit logs to prevent memory issues - performance optimization
       const newLogs = [...state.logs, action.payload];
       return { 
         ...state, 
-        logs: newLogs.length > 100 ? newLogs.slice(-100) : newLogs 
+        logs: newLogs.length > 50 ? newLogs.slice(-50) : newLogs // Reduced from 100 to 50
       };
     case 'SET_TRANSCRIPT':
       return { ...state, transcript: action.payload };
@@ -106,6 +127,18 @@ function liveAPIReducer(state: LiveAPIState, action: LiveAPIAction): LiveAPIStat
       return { ...state, activeVideoStream: action.payload };
     case 'CLEAR_LOGS':
       return { ...state, logs: [] };
+    case 'SET_ONBOARDING_MODE':
+      return { ...state, onboardingMode: action.payload };
+    case 'SET_SELECTED_PRODUCT':
+      return { ...state, selectedProduct: action.payload };
+    case 'SET_CURRENT_FLOW':
+      return { ...state, currentFlow: action.payload };
+    case 'SET_ONBOARDING_PROGRESS':
+      return { ...state, onboardingProgress: action.payload };
+    case 'SET_ONBOARDING_CONTEXT':
+      return { ...state, onboardingContext: action.payload };
+    case 'SET_ONBOARDING_PAUSED':
+      return { ...state, isOnboardingPaused: action.payload };
     default:
       return state;
   }
@@ -126,21 +159,25 @@ const initialState: LiveAPIState = {
   logs: [],
   transcript: '',
   message: '',
-  systemInstruction: 'You are a helpful AI assistant with auto-recording enabled. Users can speak immediately when connected without clicking any buttons. Respond naturally with conversational audio. Keep responses concise and friendly.',
+  systemInstruction: 'You are a helpful AI assistant.',
   autoReconnect: true,
+  onboardingMode: false,
+  selectedProduct: null,
+  currentFlow: null,
+  onboardingProgress: null,
+  onboardingContext: null,
+  isOnboardingPaused: false,
 };
 
 interface LiveAPIContextType {
   state: LiveAPIState;
-  
-  // Optimized actions
   setConnected: (connected: boolean) => void;
   setRecording: (recording: boolean) => void;
   setAudioEnabled: (enabled: boolean) => void;
   setInputVolume: (volume: number) => void;
   setOutputVolume: (volume: number) => void;
   addLog: (type: LogEntry['type'], message: string, data?: any) => void;
-  setTranscript: (transcript: string) => void;
+  setTranscript: (transcript: string | ((prev: string) => string)) => void;
   setMessage: (message: string) => void;
   setApiKey: (key: string) => void;
   setModel: (model: string) => void;
@@ -150,19 +187,22 @@ interface LiveAPIContextType {
   setScreenShare: (enabled: boolean) => void;
   setVideoStream: (stream: MediaStream | null) => void;
   clearLogs: () => void;
-  
-  // Core functionality
   connect: () => Promise<void>;
   disconnect: () => void;
   toggleRecording: () => Promise<void>;
   sendMessage: (text: string) => void;
-  
-  // Video functionality
   startCamera: () => Promise<void>;
   startScreenShare: () => Promise<void>;
   stopVideo: () => void;
-  
-  // Refs for performance
+  getAvailableProducts: () => OnboardingProduct[];
+  selectProduct: (productId: string) => Promise<{ success: boolean; message: string }>;
+  startOnboarding: () => Promise<void>;
+  pauseOnboarding: () => void;
+  resumeOnboarding: () => void;
+  restartOnboarding: () => void;
+  processOnboardingInput: (input: string, audioTranscript?: string) => Promise<void>;
+  getEstimatedTimeRemaining: () => number;
+  getCurrentStepGuidance: () => string;
   clientRef: React.MutableRefObject<GenAILiveClient | null>;
   audioRecorderRef: React.MutableRefObject<AudioRecorder | null>;
   audioStreamerRef: React.MutableRefObject<AudioStreamer | null>;
@@ -177,18 +217,14 @@ export function LiveAPIProvider({ children }: { children: React.ReactNode }) {
   const clientRef = useRef<GenAILiveClient | null>(null);
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
   const audioStreamerRef = useRef<AudioStreamer | null>(null);
-  const isConnectedRef = useRef(false);
-  const isRecordingRef = useRef(false);
 
-  // Memoized action creators - prevent re-renders
+  // Basic action creators (simplified)
   const setConnected = useCallback((connected: boolean) => {
     dispatch({ type: 'SET_CONNECTED', payload: connected });
-    isConnectedRef.current = connected;
   }, []);
 
   const setRecording = useCallback((recording: boolean) => {
     dispatch({ type: 'SET_RECORDING', payload: recording });
-    isRecordingRef.current = recording;
   }, []);
 
   const setAudioEnabled = useCallback((enabled: boolean) => {
@@ -203,21 +239,30 @@ export function LiveAPIProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'SET_OUTPUT_VOLUME', payload: volume });
   }, []);
 
+  // Simplified logging (reduced verbosity)
   const addLog = useCallback((type: LogEntry['type'], message: string, data?: any) => {
-    const logEntry: LogEntry = {
-      id: uuidv4(),
-      timestamp: new Date().toLocaleTimeString(),
-      type,
-      message,
-      data,
-    };
-    dispatch({ type: 'ADD_LOG', payload: logEntry });
-    console.log({ type, message, data });
+    // Only log errors and critical info to reduce noise
+    if (type === 'error' || (type === 'success' && message.includes('Connected'))) {
+      const logEntry: LogEntry = {
+        id: uuidv4(),
+        timestamp: new Date().toLocaleTimeString(),
+        type,
+        message,
+        data,
+      };
+      dispatch({ type: 'ADD_LOG', payload: logEntry });
+      console.log({ type, message, data });
+    }
   }, []);
 
-  const setTranscript = useCallback((transcript: string) => {
-    dispatch({ type: 'SET_TRANSCRIPT', payload: transcript });
-  }, []);
+  // FIXED: Updated setTranscript to handle both direct values and updater functions
+  const setTranscript = useCallback((transcript: string | ((prev: string) => string)) => {
+    if (typeof transcript === 'string') {
+      dispatch({ type: 'SET_TRANSCRIPT', payload: transcript });
+    } else {
+      dispatch({ type: 'SET_TRANSCRIPT', payload: transcript(state.transcript) });
+    }
+  }, [state.transcript]);
 
   const setMessage = useCallback((message: string) => {
     dispatch({ type: 'SET_MESSAGE', payload: message });
@@ -255,43 +300,30 @@ export function LiveAPIProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'CLEAR_LOGS' });
   }, []);
 
-  // Initialize audio components - Performance optimized
-  useEffect(() => {
-    let isMounted = true;
-
-    const initAudio = async () => {
-      try {
-        // Initialize AudioRecorder
-        audioRecorderRef.current = new AudioRecorder(16000);
-        
-        // Initialize AudioStreamer
-        const audioCtx = await audioContext({ id: 'audio-out' });
-        audioStreamerRef.current = new AudioStreamer(audioCtx);
-        
-        if (isMounted) {
-          addLog('success', 'Audio components initialized successfully');
-        }
-      } catch (error) {
-        if (isMounted) {
-          addLog('error', 'Failed to initialize audio components', error);
-        }
-      }
-    };
-
-    initAudio();
-
-    return () => {
-      isMounted = false;
+  // FIXED: Removed circular dependency refs - direct implementation
+  const disconnect = useCallback(() => {
+    if (clientRef.current) {
+      clientRef.current.disconnect();
+      clientRef.current = null;
+      setConnected(false);
+      setSessionId('');
+      setRecording(false);
+      
       if (audioRecorderRef.current) {
         audioRecorderRef.current.stop();
       }
-      if (audioStreamerRef.current) {
-        audioStreamerRef.current.stop();
+      
+      if (state.activeVideoStream) {
+        state.activeVideoStream.getTracks().forEach(track => track.stop());
+        setVideoStream(null);
+        setCamera(false);
+        setScreenShare(false);
       }
-    };
-  }, [addLog]);
+      
+      addLog('info', 'Disconnected');
+    }
+  }, [setConnected, setSessionId, setRecording, setVideoStream, setCamera, setScreenShare, state.activeVideoStream, addLog]);
 
-  // Connect function - Optimized
   const connect = useCallback(async () => {
     const key = state.apiKey || process.env.NEXT_PUBLIC_GOOGLE_AI_API_KEY;
     if (!key) {
@@ -300,19 +332,16 @@ export function LiveAPIProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      addLog('info', `Connecting to ${state.selectedModel}...`);
-      
-      // Create client with optimized config
       const connectionConfig = {
         apiKey: key,
-        debug: false, // Disable debug in production for performance
+        debug: false,
         maxReconnects: state.autoReconnect ? 20 : 0,
         maxAttempts: 15,
       };
 
       clientRef.current = new GenAILiveClient(connectionConfig);
       
-      // Optimized event handlers
+      // Event handlers
       clientRef.current.on('open', () => {
         setConnected(true);
         const newSessionId = `session_${Date.now()}`;
@@ -322,10 +351,8 @@ export function LiveAPIProvider({ children }: { children: React.ReactNode }) {
 
       clientRef.current.on('close', () => {
         setConnected(false);
-        if (state.isRecording) {
-          setRecording(false);
-        }
-        addLog('warning', 'Connection closed');
+        setRecording(false);
+        addLog('error', 'Connection closed');
       });
 
       clientRef.current.on('audio', (audioData: ArrayBuffer) => {
@@ -335,20 +362,54 @@ export function LiveAPIProvider({ children }: { children: React.ReactNode }) {
       });
 
       clientRef.current.on('setupcomplete', async () => {
-        addLog('success', 'Setup completed');
+        // Send onboarding messages if in onboarding mode
+        if (state.onboardingMode && state.currentFlow) {
+          const welcomeMessage = state.currentFlow.welcomeMessage;
+          const firstStep = state.currentFlow.steps[0];
+          const firstStepGuidance = onboardingManager.generateStepGuidance(firstStep);
+          
+          if (welcomeMessage && clientRef.current) {
+            setTimeout(() => {
+              if (clientRef.current) {
+                clientRef.current.send([{ text: welcomeMessage }], false);
+                
+                setTimeout(() => {
+                  if (clientRef.current) {
+                    clientRef.current.send([{ text: firstStepGuidance }], false);
+                  }
+                }, 2000);
+              }
+            }, 1000);
+          }
+        }
+        
         if (state.audioEnabled && audioRecorderRef.current) {
           try {
             setRecording(true);
             await audioRecorderRef.current.start();
-            addLog('success', 'Auto-started recording');
           } catch (error) {
-            addLog('error', 'Failed to auto-start recording', error);
+            addLog('error', 'Failed to auto-start recording');
             setRecording(false);
           }
         }
       });
 
-      // Connect with optimized config
+      // FIXED: Correct content handling for LiveServerContent type
+      clientRef.current.on('content', (content) => {
+        // Handle the proper structure of LiveServerContent
+        if ('modelTurn' in content && content.modelTurn?.parts) {
+          const textContent = content.modelTurn.parts
+            .filter(part => part.text)
+            .map(part => part.text)
+            .join(' ');
+          
+          if (textContent.trim()) {
+            setTranscript((prev: string) => prev + `\nAssistant: ${textContent}\n`);
+          }
+        }
+      });
+
+      // Connect with current system instruction
       const config = {
         systemInstruction: {
           parts: [{ text: state.systemInstruction }],
@@ -368,40 +429,181 @@ export function LiveAPIProvider({ children }: { children: React.ReactNode }) {
       await clientRef.current.connect(state.selectedModel, config);
       
     } catch (error) {
-      addLog('error', 'Failed to connect', error);
+      addLog('error', 'Failed to connect');
     }
-  }, [state.apiKey, state.selectedModel, state.systemInstruction, state.audioEnabled, state.autoReconnect, addLog, setConnected, setSessionId, setRecording]);
+  }, [
+    state.apiKey, 
+    state.selectedModel, 
+    state.systemInstruction, 
+    state.audioEnabled, 
+    state.autoReconnect,
+    state.onboardingMode,
+    state.currentFlow,
+    addLog, 
+    setConnected, 
+    setSessionId, 
+    setRecording,
+    setTranscript
+  ]);
 
-  // Disconnect function
-  const disconnect = useCallback(() => {
-    if (clientRef.current) {
-      clientRef.current.disconnect();
-      clientRef.current = null;
-      setConnected(false);
-      setSessionId('');
-      setRecording(false);
+  // Onboarding functions (simplified)
+  const getAvailableProducts = useCallback((): OnboardingProduct[] => {
+    return onboardingManager.getAvailableProducts();
+  }, []);
+
+  const selectProduct = useCallback(async (productId: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const result = onboardingManager.selectProduct(productId);
       
-      // Stop audio recorder when disconnecting
-      if (audioRecorderRef.current) {
-        audioRecorderRef.current.stop();
-        addLog('info', '🎤 Audio recorder stopped');
+      if (result.success && result.flow) {
+        const product = getAvailableProducts().find(p => p.id === productId);
+        
+        dispatch({ type: 'SET_SELECTED_PRODUCT', payload: product || null });
+        dispatch({ type: 'SET_CURRENT_FLOW', payload: result.flow });
+        dispatch({ type: 'SET_ONBOARDING_MODE', payload: true });
+        
+        if (result.flow.systemPrompt) {
+          setSystemInstruction(result.flow.systemPrompt);
+        }
+        
+        const initialProgress = onboardingManager.getCurrentProgress();
+        const initialContext = onboardingManager.getCurrentContext();
+        
+        if (initialProgress) {
+          dispatch({ type: 'SET_ONBOARDING_PROGRESS', payload: initialProgress });
+        }
+        
+        if (initialContext) {
+          dispatch({ type: 'SET_ONBOARDING_CONTEXT', payload: initialContext });
+        }
       }
       
-      // Stop video streams when disconnecting
-      if (state.activeVideoStream) {
-        state.activeVideoStream.getTracks().forEach(track => track.stop());
-        setVideoStream(null);
-        setCamera(false);
-        setScreenShare(false);
+      return result;
+    } catch (error) {
+      addLog('error', 'Failed to select product');
+      return { success: false, message: 'Failed to select product' };
+    }
+  }, [getAvailableProducts, setSystemInstruction, addLog]);
+
+  const startOnboarding = useCallback(async (): Promise<void> => {
+    if (!state.currentFlow) {
+      addLog('error', 'No flow selected');
+      return;
+    }
+
+    try {
+      const onboardingPrompt = state.currentFlow.systemPrompt;
+      setSystemInstruction(onboardingPrompt);
+      
+      // Brief delay to ensure state propagation
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // If already connected, disconnect and reconnect with new prompt
+      if (state.isConnected) {
+        disconnect();
+        setTimeout(async () => {
+          await connect();
+        }, 1500);
       }
       
-      addLog('info', 'Disconnected - all streams stopped');
+      const progress = onboardingManager.getCurrentProgress();
+      const context = onboardingManager.getCurrentContext();
+      
+      dispatch({ type: 'SET_ONBOARDING_PROGRESS', payload: progress });
+      dispatch({ type: 'SET_ONBOARDING_CONTEXT', payload: context });
+      
+    } catch (error) {
+      addLog('error', 'Failed to start onboarding');
     }
-  }, [setConnected, setSessionId, setRecording, setVideoStream, setCamera, setScreenShare, state.activeVideoStream, addLog]);
+  }, [state.currentFlow, state.isConnected, setSystemInstruction, disconnect, connect, addLog]);
 
-  // Optimized recording toggle
+  const restartOnboarding = useCallback((): void => {
+    if (state.isConnected) {
+      disconnect();
+    }
+    
+    onboardingManager.resetSession();
+    
+    dispatch({ type: 'SET_ONBOARDING_MODE', payload: false });
+    dispatch({ type: 'SET_SELECTED_PRODUCT', payload: null });
+    dispatch({ type: 'SET_CURRENT_FLOW', payload: null });
+    dispatch({ type: 'SET_ONBOARDING_PROGRESS', payload: null });
+    dispatch({ type: 'SET_ONBOARDING_CONTEXT', payload: null });
+    dispatch({ type: 'SET_ONBOARDING_PAUSED', payload: false });
+    
+    setSystemInstruction('You are a helpful AI assistant.');
+    setTranscript('');
+  }, [disconnect, setSystemInstruction, setTranscript, state.isConnected]);
+
+  const pauseOnboarding = useCallback((): void => {
+    onboardingManager.pauseSession();
+    dispatch({ type: 'SET_ONBOARDING_PAUSED', payload: true });
+  }, []);
+
+  const resumeOnboarding = useCallback((): void => {
+    onboardingManager.resumeSession();
+    dispatch({ type: 'SET_ONBOARDING_PAUSED', payload: false });
+  }, []);
+
+  const processOnboardingInput = useCallback(async (input: string, audioTranscript?: string): Promise<void> => {
+    if (!state.onboardingMode) {
+      return;
+    }
+
+    try {
+      const result = await onboardingManager.processUserInput(input, audioTranscript);
+      
+      if (result.success) {
+        if (result.progress) {
+          dispatch({ type: 'SET_ONBOARDING_PROGRESS', payload: result.progress });
+        }
+        if (result.context) {
+          dispatch({ type: 'SET_ONBOARDING_CONTEXT', payload: result.context });
+        }
+        if (result.systemPrompt) {
+          setSystemInstruction(result.systemPrompt);
+        }
+        
+        // Send step guidance as AI message
+        if (result.stepGuidance && clientRef.current && state.isConnected) {
+          setTimeout(() => {
+            if (clientRef.current) {
+              clientRef.current.send([{ text: result.stepGuidance }], false);
+            }
+          }, 800);
+        }
+        
+        if (result.completed) {
+          if (state.currentFlow && clientRef.current) {
+            setTimeout(() => {
+              if (clientRef.current && state.currentFlow) {
+                clientRef.current.send([{ text: state.currentFlow.completionMessage }], false);
+              }
+            }, 1200);
+          }
+          
+          setTimeout(() => {
+            dispatch({ type: 'SET_ONBOARDING_MODE', payload: false });
+          }, 5000);
+        }
+      }
+    } catch (error) {
+      addLog('error', 'Failed to process onboarding input');
+    }
+  }, [state.onboardingMode, state.isConnected, state.currentFlow, setSystemInstruction, addLog]);
+
+  const getEstimatedTimeRemaining = useCallback((): number => {
+    return onboardingManager.getEstimatedTimeRemaining();
+  }, []);
+
+  const getCurrentStepGuidance = useCallback((): string => {
+    if (!state.onboardingContext?.currentStep) return '';
+    return onboardingManager.generateStepGuidance(state.onboardingContext.currentStep);
+  }, [state.onboardingContext]);
+
+  // Recording toggle (simplified)
   const toggleRecording = useCallback(async () => {
-    if (!audioRecorderRef.current || !isConnectedRef.current) {
+    if (!audioRecorderRef.current || !state.isConnected) {
       addLog('error', 'Must be connected to start recording');
       return;
     }
@@ -410,36 +612,37 @@ export function LiveAPIProvider({ children }: { children: React.ReactNode }) {
       if (!state.isRecording) {
         await audioRecorderRef.current.start();
         setRecording(true);
-        addLog('success', 'Recording started');
       } else {
         audioRecorderRef.current.stop();
         setRecording(false);
-        addLog('info', 'Recording stopped');
       }
     } catch (error) {
-      addLog('error', 'Recording toggle failed', error);
+      addLog('error', 'Recording toggle failed');
       setRecording(false);
     }
-  }, [state.isRecording, addLog, setRecording]);
+  }, [state.isRecording, state.isConnected, addLog, setRecording]);
 
-  // Send message function
   const sendMessage = useCallback((text: string) => {
-    if (!clientRef.current || !isConnectedRef.current || !text.trim()) {
+    if (!clientRef.current || !state.isConnected || !text.trim()) {
       return;
     }
 
     try {
       clientRef.current.send([{ text }], true);
-      // Fix TypeScript error: use current state value instead of callback
-      setTranscript(state.transcript + `\nUser: ${text}\n`);
+      setTranscript((prev: string) => prev + `\nUser: ${text}\n`);
       setMessage('');
-      addLog('info', 'Message sent');
+      
+      if (state.onboardingMode) {
+        processOnboardingInput(text).catch(() => {
+          addLog('error', 'Failed to process onboarding input');
+        });
+      }
     } catch (error) {
-      addLog('error', 'Failed to send message', error);
+      addLog('error', 'Failed to send message');
     }
-  }, [state.transcript, setTranscript, setMessage, addLog]);
+  }, [state.onboardingMode, state.isConnected, setTranscript, setMessage, addLog, processOnboardingInput]);
 
-  // Video functionality implementations
+  // Video functionality (simplified)
   const startCamera = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -452,7 +655,6 @@ export function LiveAPIProvider({ children }: { children: React.ReactNode }) {
         audio: false
       });
       
-      // Stop any existing streams
       if (state.activeVideoStream) {
         state.activeVideoStream.getTracks().forEach(track => track.stop());
       }
@@ -460,9 +662,8 @@ export function LiveAPIProvider({ children }: { children: React.ReactNode }) {
       setVideoStream(stream);
       setCamera(true);
       setScreenShare(false);
-      addLog('success', '📹 Camera started successfully');
     } catch (error) {
-      addLog('error', 'Failed to start camera', error);
+      addLog('error', 'Failed to start camera');
       setCamera(false);
     }
   }, [state.activeVideoStream, setVideoStream, setCamera, setScreenShare, addLog]);
@@ -478,7 +679,6 @@ export function LiveAPIProvider({ children }: { children: React.ReactNode }) {
         audio: false
       });
       
-      // Stop any existing streams
       if (state.activeVideoStream) {
         state.activeVideoStream.getTracks().forEach(track => track.stop());
       }
@@ -486,18 +686,15 @@ export function LiveAPIProvider({ children }: { children: React.ReactNode }) {
       setVideoStream(stream);
       setScreenShare(true);
       setCamera(false);
-      addLog('success', '🖥️ Screen sharing started successfully');
       
-      // Handle when user stops sharing via browser UI
       stream.getTracks().forEach(track => {
         track.addEventListener('ended', () => {
           setVideoStream(null);
           setScreenShare(false);
-          addLog('info', 'Screen sharing ended by user');
         });
       });
     } catch (error) {
-      addLog('error', 'Failed to start screen sharing', error);
+      addLog('error', 'Failed to start screen sharing');
       setScreenShare(false);
     }
   }, [state.activeVideoStream, setVideoStream, setScreenShare, setCamera, addLog]);
@@ -508,24 +705,56 @@ export function LiveAPIProvider({ children }: { children: React.ReactNode }) {
       setVideoStream(null);
       setCamera(false);
       setScreenShare(false);
-      addLog('info', '📹 Video stopped');
     }
-  }, [state.activeVideoStream, setVideoStream, setCamera, setScreenShare, addLog]);
+  }, [state.activeVideoStream, setVideoStream, setCamera, setScreenShare]);
 
-  // Set up audio recording event handlers - Performance optimized
+  // Initialize audio components
+  useEffect(() => {
+    let isMounted = true;
+
+    const initAudio = async () => {
+      try {
+        audioRecorderRef.current = new AudioRecorder(16000);
+        const audioCtx = await audioContext({ id: 'audio-out' });
+        audioStreamerRef.current = new AudioStreamer(audioCtx);
+        
+        if (isMounted) {
+          addLog('success', 'Audio components initialized');
+        }
+      } catch (error) {
+        if (isMounted) {
+          addLog('error', 'Failed to initialize audio components');
+        }
+      }
+    };
+
+    initAudio();
+
+    return () => {
+      isMounted = false;
+      if (audioRecorderRef.current) {
+        audioRecorderRef.current.stop();
+      }
+      if (audioStreamerRef.current) {
+        audioStreamerRef.current.stop();
+      }
+    };
+  }, [addLog]);
+
+  // Audio recording event handlers (fixed memory leak)
   useEffect(() => {
     const audioRecorder = audioRecorderRef.current;
     if (!audioRecorder) return;
 
     const handleAudioData = (base64Data: string) => {
-      if (isConnectedRef.current && isRecordingRef.current && clientRef.current) {
+      if (state.isConnected && state.isRecording && clientRef.current) {
         try {
           clientRef.current.sendRealtimeInput([{
             mimeType: 'audio/pcm;rate=16000',
             data: base64Data,
           }]);
         } catch (error) {
-          addLog('error', 'Failed to send audio', error);
+          addLog('error', 'Failed to send audio');
         }
       }
     };
@@ -541,7 +770,7 @@ export function LiveAPIProvider({ children }: { children: React.ReactNode }) {
       audioRecorder.off('data', handleAudioData);
       audioRecorder.off('volume', handleVolumeChange);
     };
-  }, [addLog, setInputVolume]);
+  }, [state.isConnected, state.isRecording, addLog, setInputVolume]);
 
   const contextValue: LiveAPIContextType = {
     state,
@@ -568,6 +797,15 @@ export function LiveAPIProvider({ children }: { children: React.ReactNode }) {
     startCamera,
     startScreenShare,
     stopVideo,
+    getAvailableProducts,
+    selectProduct,
+    startOnboarding,
+    pauseOnboarding,
+    resumeOnboarding,
+    restartOnboarding,
+    processOnboardingInput,
+    getEstimatedTimeRemaining,
+    getCurrentStepGuidance,
     clientRef,
     audioRecorderRef,
     audioStreamerRef,

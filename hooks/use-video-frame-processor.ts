@@ -44,7 +44,7 @@ export function useVideoFrameProcessor(
     };
   }, []);
 
-  // Optimized frame capture function
+  // Enhanced frame capture function with error handling
   const captureAndSendFrame = useCallback(() => {
     if (!state.isConnected || !clientRef.current || !videoRef.current || !canvasRef.current) {
       return;
@@ -55,6 +55,7 @@ export function useVideoFrameProcessor(
     const ctx = canvas.getContext('2d');
 
     if (!ctx || video.videoWidth === 0 || video.videoHeight === 0) {
+      // Video not ready yet
       return;
     }
 
@@ -76,28 +77,48 @@ export function useVideoFrameProcessor(
         data
       }]);
 
-      addLog('info', `📸 Sent video frame: ${canvas.width}x${canvas.height}`);
+      if (process.env.NODE_ENV === 'development') {
+        addLog('info', `📸 Sent video frame: ${canvas.width}x${canvas.height} (${Math.round(data.length / 1024)}KB)`);
+      }
     } catch (error) {
       addLog('error', 'Failed to capture video frame', error);
+      console.error('📸 Frame capture error:', error);
     }
   }, [state.isConnected, videoRef, clientRef, scale, quality, addLog]);
 
-  // Video frame streaming loop
+  // Enhanced video frame streaming loop
   useEffect(() => {
     const startFrameCapture = () => {
       // Check if we should continue capturing
       if (!state.isConnected || (!state.isCameraOn && !state.isScreenSharing)) {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
         return;
       }
       
       captureAndSendFrame();
+      
+      // Schedule next frame capture
       timeoutRef.current = window.setTimeout(startFrameCapture, 1000 / frameRate);
     };
 
     if (state.isConnected && (state.isCameraOn || state.isScreenSharing)) {
       addLog('info', `📹 Starting video frame capture at ${frameRate} fps`);
-      // Use requestAnimationFrame for better performance
-      requestAnimationFrame(startFrameCapture);
+      
+      // Wait a bit for video to be ready before starting capture
+      const startDelay = setTimeout(() => {
+        startFrameCapture();
+      }, 1000);
+      
+      return () => {
+        clearTimeout(startDelay);
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+      };
     } else {
       // Stop capturing if conditions no longer met
       if (timeoutRef.current) {
