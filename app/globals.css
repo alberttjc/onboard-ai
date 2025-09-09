@@ -1,0 +1,436 @@
+/**
+ * Performance-Optimized Global Styles
+ * Includes CSS optimizations for better rendering performance
+ */
+
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Critical CSS for immediate rendering */
+:root {
+  --font-inter: 'Inter', system-ui, sans-serif;
+  
+  /* Performance-optimized custom properties */
+  --header-height: 4rem;
+  --sidebar-width: 20rem;
+  --border-radius: 0.5rem;
+  --transition-fast: 150ms ease-out;
+  --transition-medium: 250ms ease-out;
+  --transition-slow: 350ms ease-out;
+  
+  /* GPU-accelerated colors for better performance */
+  --bg-primary: #111827;
+  --bg-secondary: #1f2937;
+  --bg-tertiary: #374151;
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+  --accent-primary: #3b82f6;
+  --accent-secondary: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+}
+
+/* Performance optimizations */
+* {
+  box-sizing: border-box;
+}
+
+/* Reduce repaints and improve compositing */
+*,
+*::before,
+*::after {
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Optimize font rendering */
+html {
+  font-family: var(--font-inter);
+  text-rendering: optimizeSpeed; /* Faster than optimizeLegibility for performance */
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Body optimizations */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  
+  /* Performance optimizations */
+  will-change: auto; /* Let browser decide */
+  transform: translateZ(0); /* Force GPU acceleration */
+}
+
+/* Optimize scrolling performance */
+* {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High-performance animations using CSS transforms */
+@keyframes slideInFromRight {
+  0% {
+    transform: translate3d(100%, 0, 0);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromLeft {
+  0% {
+    transform: translate3d(-100%, 0, 0);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes pulse-optimized {
+  0%, 100% {
+    transform: scale3d(1, 1, 1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale3d(1.05, 1.05, 1);
+    opacity: 0.8;
+  }
+}
+
+/* Performance-optimized component styles */
+.performance-optimized {
+  /* Use GPU-accelerated properties */
+  transform: translateZ(0);
+  will-change: transform;
+  
+  /* Optimize repaints */
+  contain: layout style paint;
+}
+
+/* Optimized button styles */
+.btn-optimized {
+  /* Use transform instead of changing width/height */
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+.btn-optimized:hover {
+  transform: translate3d(0, -1px, 0) scale(1.02);
+}
+
+.btn-optimized:active {
+  transform: translate3d(0, 0, 0) scale(0.98);
+}
+
+/* Audio visualizer optimizations */
+.audio-visualizer {
+  contain: strict; /* Optimize rendering containment */
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.volume-bar {
+  /* Use transform for animations instead of width changes */
+  transform-origin: left center;
+  transition: transform var(--transition-fast);
+  will-change: transform;
+}
+
+/* Video element optimizations */
+video {
+  /* Optimize video rendering */
+  object-fit: cover;
+  transform: translateZ(0);
+  
+  /* Prevent layout shifts */
+  width: 100%;
+  height: auto;
+  
+  /* Hardware acceleration hints */
+  will-change: auto;
+}
+
+/* Optimize canvas elements */
+canvas {
+  /* Prevent anti-aliasing for better performance in some cases */
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  
+  /* GPU acceleration */
+  transform: translateZ(0);
+  will-change: auto;
+}
+
+/* Performance-optimized scroll areas */
+.scroll-optimized {
+  /* Use momentum scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+  
+  /* Optimize scroll performance */
+  overflow-anchor: none;
+  overscroll-behavior: contain;
+  
+  /* GPU acceleration */
+  transform: translateZ(0);
+  will-change: scroll-position;
+}
+
+/* Loading states with optimized animations */
+.loading-spinner {
+  animation: spin 1s linear infinite;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg) translateZ(0);
+  }
+  100% {
+    transform: rotate(360deg) translateZ(0);
+  }
+}
+
+/* Optimized grid and flex layouts */
+.grid-optimized {
+  display: grid;
+  contain: layout style;
+}
+
+.flex-optimized {
+  display: flex;
+  contain: layout style;
+}
+
+/* Performance-critical UI elements */
+.critical-ui {
+  /* Optimize for frequent updates */
+  contain: strict;
+  will-change: auto;
+  transform: translateZ(0);
+}
+
+/* Console/terminal output optimization */
+.console-output {
+  /* Optimize text rendering for monospace content */
+  font-feature-settings: 'liga' 0; /* Disable ligatures for performance */
+  text-rendering: optimizeSpeed;
+  
+  /* Optimize scrolling for large content */
+  contain: size layout style;
+  overflow-anchor: none;
+}
+
+/* Media query optimizations */
+@media (min-width: 768px) {
+  /* Desktop optimizations */
+  .responsive-optimized {
+    contain: layout style;
+  }
+}
+
+@media (max-width: 767px) {
+  /* Mobile optimizations */
+  .mobile-optimized {
+    /* Reduce animations on mobile for better performance */
+    animation-duration: 0.2s !important;
+    transition-duration: 0.2s !important;
+  }
+  
+  /* Optimize touch interactions */
+  .touch-optimized {
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* Reduce motion for accessibility and performance */
+@media (prefers-reduced-motion: reduce) {
+  .motion-safe {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* High contrast mode optimizations */
+@media (prefers-contrast: high) {
+  :root {
+    --bg-primary: #000000;
+    --bg-secondary: #1a1a1a;
+    --text-primary: #ffffff;
+    --border-color: #ffffff;
+  }
+}
+
+/* Focus optimizations for better accessibility */
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  transition: outline-color var(--transition-fast);
+}
+
+/* Optimize for print media */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  * {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+}
+
+/* Performance monitoring specific styles */
+.performance-monitor {
+  /* Ensure performance monitor doesn't affect main app performance */
+  contain: strict;
+  position: fixed;
+  z-index: 9999;
+  pointer-events: auto;
+}
+
+.performance-monitor * {
+  /* Prevent performance monitor from triggering repaints in main app */
+  will-change: auto;
+}
+
+/* Utility classes for performance */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.contain-layout {
+  contain: layout;
+}
+
+.contain-paint {
+  contain: paint;
+}
+
+.contain-strict {
+  contain: strict;
+}
+
+.no-reflow {
+  /* Prevent layout thrashing */
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* Audio/Video specific optimizations */
+.media-container {
+  /* Optimize media element containers */
+  contain: layout style;
+  isolation: isolate;
+}
+
+.audio-controls {
+  /* Optimize audio control rendering */
+  contain: layout style paint;
+  transform: translateZ(0);
+}
+
+.video-overlay {
+  /* Optimize video overlay rendering */
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  contain: strict;
+  will-change: opacity;
+}
+
+/* Loading and skeleton optimizations */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-secondary) 25%,
+    var(--bg-tertiary) 50%,
+    var(--bg-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  contain: strict;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Error boundary styles */
+.error-boundary {
+  /* Ensure error boundaries don't cause additional performance issues */
+  contain: layout style paint;
+  isolation: isolate;
+}
+
+/* Performance debugging helpers (development only) */
+.perf-debug {
+  outline: 1px solid red;
+  background: rgba(255, 0, 0, 0.1);
+}
+
+.perf-debug::before {
+  content: 'PERF';
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: red;
+  color: white;
+  font-size: 10px;
+  padding: 2px 4px;
+  z-index: 10000;
+}
+
+/* Hide performance debugging in production */
+body:not(.development) .perf-debug::before {
+  display: none;
+}
