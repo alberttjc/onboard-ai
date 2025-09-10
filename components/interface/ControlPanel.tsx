@@ -97,7 +97,7 @@ const ControlPanel = memo(({
             </Select>
           </div>
 
-          <div className="flex-shrink-0">
+          {/* <div className="flex-shrink-0">
             <Label htmlFor="api-key" className="text-lg lg:text-sm text-gray-300 mb-3 lg:mb-2 block font-medium">
               API Key
             </Label>
@@ -109,7 +109,7 @@ const ControlPanel = memo(({
               onChange={(e) => setApiKey(e.target.value)}
               className="bg-gray-800 border-gray-700 text-white placeholder-gray-400 h-14 lg:h-auto text-lg lg:text-sm"
             />
-          </div>
+          </div> */}
 
           <div className="flex-1 flex flex-col">
             <div className="flex items-center justify-between mb-3 lg:mb-2">
