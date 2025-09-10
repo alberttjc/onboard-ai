@@ -130,6 +130,7 @@ const MainInterface = memo(
     } = useLiveAPI();
 
     const [isProductSelecting, setIsProductSelecting] = useState(false);
+    const [showProgressPanel, setShowProgressPanel] = useState(true);
     const videoRef = useRef<HTMLVideoElement>(null);
 
     // Video frame processing for visual input
@@ -195,6 +196,12 @@ const MainInterface = memo(
     const handleProductSelect = async (productId: string) => {
       setIsProductSelecting(true);
       try {
+        setShowProgressPanel(true)
+        if (productId === "chat") {
+          // Connect directly without onboarding flow
+          setShowProgressPanel(false);
+        }
+        
         console.log("🚀 Starting seamless onboarding flow for:", productId);
 
         // Step 1: Select the product and load the flow
@@ -729,7 +736,7 @@ const MainInterface = memo(
           </div>
 
           {/* Right Sidebar - Onboarding Progress (Desktop Only) */}
-          {showOnboardingInterface && state.currentFlow && (
+          {showOnboardingInterface && state.currentFlow && state.onboardingMode && showProgressPanel && (
           <div className="hidden lg:block w-[25%] border-l border-gray-700 p-6">
           <OnboardingErrorBoundary>
             <OnboardingProgress

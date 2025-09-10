@@ -14,6 +14,7 @@ import {
 import { BaseOnboardingFlow } from './base-flow';
 import { NotionOnboardingFlow } from './notion-flow';
 import { TrelloOnboardingFlow } from './trello-flow';
+import { FreeFormChatFlow } from './chat-flow';
 import { analyticsService } from '@/lib/analytics/analytics-service';
 import { StepAnnouncer } from './step-announcer';
 
@@ -25,6 +26,16 @@ export class OnboardingManager {
 
   // Available products for onboarding
   private readonly availableProducts: OnboardingProduct[] = [
+    {
+      id: 'chat',
+      name: 'Just Chat',
+      description: `Have a natural conversation without any structured onboarding. Ask questions, get help, or just chat about anything you'd like.`,
+      category: 'Conversation',
+      estimatedTime: 0,
+      difficulty: 'easy',
+      icon: '💬',
+      color: '#000000'
+    },
     {
       id: 'notion',
       name: 'Notion',
@@ -112,6 +123,8 @@ export class OnboardingManager {
         return new NotionOnboardingFlow();
       case 'trello':
         return new TrelloOnboardingFlow();
+      case 'chat':
+        return new FreeFormChatFlow();
       default:
         throw new Error(`Onboarding flow not implemented for product: ${productId}`);
     }

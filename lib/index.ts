@@ -9,6 +9,7 @@ export * from './types/onboarding.types';
 export { BaseOnboardingFlow } from './onboarding/base-flow';
 export { NotionOnboardingFlow } from './onboarding/notion-flow';
 export { TrelloOnboardingFlow } from './onboarding/trello-flow';
+export { FreeFormChatFlow } from './onboarding/chat-flow';
 export { OnboardingManager, onboardingManager } from './onboarding/onboarding-manager';
 
 // Analytics

@@ -129,11 +129,10 @@ const ProductSelector = memo(({
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-white mb-4">
-          Choose Your Onboarding Experience
+          Choose Your Experience
         </h1>
         <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-          Select a product to get personalized, voice-guided setup assistance. 
-          I'll walk you through each step and answer your questions along the way.
+          Start a free-form conversation or get personalized, voice-guided setup assistance for specific products.
         </p>
       </div>
 
