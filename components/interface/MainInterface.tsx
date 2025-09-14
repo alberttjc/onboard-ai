@@ -333,7 +333,7 @@ const MainInterface = memo(
                         autoPlay
                         playsInline
                         muted
-                        className="w-full max-w-md mx-auto rounded-lg bg-gray-700"
+                        className="w-full max-w-2xl mx-auto rounded-lg bg-gray-700"
                         onPlay={() => console.log("📹 Video started playing")}
                         onError={(e) => console.error("📹 Video error:", e)}
                       />
@@ -574,7 +574,7 @@ const MainInterface = memo(
                         autoPlay
                         playsInline
                         muted
-                        className="w-full max-w-md mx-auto rounded-lg bg-gray-700"
+                        className="w-full max-w-2xl mx-auto rounded-lg bg-gray-700"
                         onPlay={() =>
                           console.log("📹 Video started playing in chat mode")
                         }
